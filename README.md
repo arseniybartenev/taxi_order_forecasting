@@ -1,2 +1,137 @@
-# taxi-order-forecasting
-This project forecasts hourly taxi orders at airports using ML on time-series data. After resampling and feature engineering (lags up to 168h, rolling means), CatBoost achieves best RMSE of 37.30, outperforming Linear Regression, Decision Tree, LightGBM. Enables optimal driver scheduling during peak hours.
+# Прогнозирование заказов такси
+
+![Python](https://img.shields.io/badge/Python-3.9-3776AB?logo=python&logoColor=white)
+![NumPy](https://img.shields.io/badge/NumPy-1.23.5-013243?logo=numpy&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-1.2.4-150458?logo=pandas&logoColor=white)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-3.9.2-11557c?logo=matplotlib&logoColor=white)
+![Seaborn](https://img.shields.io/badge/Seaborn-0.13.2-4c72b0?logo=python&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8.0-F7931E?logo=scikit-learn&logoColor=white)
+![CatBoost](https://img.shields.io/badge/CatBoost-1.2.8-ff4b4b?logo=catboost&logoColor=white)
+![LightGBM](https://img.shields.io/badge/LightGBM-4.6.0-45aaf2?logo=lightgbm&logoColor=white)
+![statsmodels](https://img.shields.io/badge/statsmodels-0.14.2-2C2D72?logo=python&logoColor=white)
+![phik](https://img.shields.io/badge/phik-0.12.5-1e8449?logo=python&logoColor=white)
+
+## Описание проекта
+
+Компания «Чётенькое такси» собрала исторические данные о заказах такси в аэропортах. Чтобы эффективно распределять водителей в периоды пиковой нагрузки, необходимо прогнозировать количество заказов на следующий час.
+
+**Цель:** Разработать модель машинного обучения для предсказания числа заказов такси на час вперёд, что позволит снизить дефицит или избыток водителей и минимизировать финансовые риски.
+
+## Данные
+
+- Исходный файл: `taxi.csv` (предоставлен компанией).  
+- Содержит временной ряд с интервалом 10 минут; столбец `num_orders` – количество заказов.  
+- Период данных: с 1 марта по 31 августа 2018 года.  
+- После ресемплинга данные агрегированы по часам и дополнены признаками: час, день недели, день месяца, лаговые значения (до 168 часов) и скользящее среднее.
+
+## Этапы работы
+
+1. **Загрузка и подготовка данных**  
+   - Ресемплинг временного ряда с 10‑минутного на часовой интервал.
+   - Создание временных признаков.
+
+2. **Исследовательский анализ данных (EDA)**  
+   - Визуализация тренда, сезонности (суточной и недельной).
+   - Анализ распределения заказов по часам, дням недели, месяцам.
+   - Корреляционный анализ признаков (phik‑матрица).
+
+3. **Признакообразование**  
+   - Добавление лаговых значений (до 168 часов – недельный цикл).
+   - Скользящее среднее по предыдущим 168 часам.
+   - One‑hot encoding для категориальных признаков (`hour`, `dayofweek`).
+
+4. **Обучение моделей**  
+   - Базовая модель: константный прогноз и прогноз по лагу 168.
+   - Линейная регрессия, DecisionTreeRegressor, CatBoostRegressor, LightGBM.
+   - Кросс‑валидация с `TimeSeriesSplit`, подбор гиперпараметров через `RandomizedSearchCV`.
+   - Оценка качества по метрике RMSE.
+
+5. **Выбор лучшей модели и анализ важности признаков**  
+   - Сравнение моделей на валидационных данных.
+   - Интерпретация наиболее значимых факторов (lag_168, hour и др.).
+
+## Используемые технологии
+
+- **Python** — основной язык.
+- **Pandas, NumPy** — обработка и анализ данных.
+- **Matplotlib, Seaborn** — визуализация.
+- **Scikit‑learn** — модели (LinearRegression, DecisionTree), пайплайны, метрики, кросс‑валидация.
+- **CatBoost, LightGBM** — градиентный бустинг.
+- **statsmodels** — декомпозиция временного ряда.
+- **phik** — расчёт матрицы корреляции для смешанных типов данных.
+- **Jupyter Notebook** — среда разработки.
+
+## Результаты
+
+| Модель                          | RMSE (CV) | Время обучения (с) | Время предсказания (с) |
+|---------------------------------|-----------|--------------------|-------------------------|
+| Линейная регрессия              | 33.28     | –                  | –                       |
+| DecisionTreeRegressor            | 26.31     | 0.095              | 0.003                   |
+| CatBoostRegressor                | **22.70** | 7.552              | 0.009                   |
+| LightGBM                         | 22.96     | 6.167              | 0.025                   |
+| lag_168 (наивный прогноз)       | 39.55     | –                  | –                       |
+
+**Лучшая модель:** `CatBoostRegressor` с оптимизированными гиперпараметрами:
+- `iterations`: 600
+- `depth`: 4
+- `learning_rate`: 0.03
+- `l2_leaf_reg`: 4
+- `bagging_temperature`: 1
+
+**RMSE на тестовой выборке:** 37.30
+
+## Выводы
+
+- Модель CatBoost существенно превосходит наивный прогноз по лагу 168 (39.55 → 37.30), что подтверждает её практическую ценность.
+- Ключевыми признаками оказались лаг 168 (недельная цикличность) и час суток.
+- Высокая скорость предсказания (9 мс) позволяет интегрировать модель в операционные процессы компании.
+
+Разработанная модель может быть использована для:
+- оптимизации графика выхода водителей,
+- снижения простоев в часы низкого спроса,
+- повышения удовлетворённости клиентов за счёт сокращения времени подачи такси в пиковые периоды.
+
+## Запуск проекта
+
+1. Клонируйте репозиторий:
+   ```bash
+   git clone https://github.com/arseniybartenev/taxi_order_forecasting.git
+   ```
+2. Перейдите в папку проекта:
+   ```bash
+   cd taxi_order_forecasting
+   ```
+3. Установите зависимости:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Поместите файл `taxi.csv` в папку `data/`.
+5. Запустите Jupyter Notebook:
+   ```bash
+   jupyter notebook notebooks/taxi_order_forecasting.ipynb
+   ```
+
+## Структура репозитория
+
+```
+taxi_order_forecasting/
+├── data/                               # Папка для данных
+│   └── taxi.csv                         # Исходные данные (нужно добавить вручную)
+├── notebooks/                           # Jupyter ноутбук с полным анализом
+│   └── taxi_order_forecasting.ipynb
+├── README.md                            # Этот файл
+└── requirements.txt                     # Список зависимостей
+```
+
+## Контакты
+
+Автор: Arseniy Bartenev  
+Email: arseniybartenev@gmail.com  
+
+---
+
+### Примечания
+
+- При первом запуске ноутбука все ячейки выполняются последовательно. Для ускорения повторных экспериментов можно сохранить промежуточные данные (например, признаки после ресемплинга).
+- Модели обучаются с использованием кросс‑валидации `TimeSeriesSplit`, что корректно для временных рядов.
+- Для воспроизведения результатов достаточно запустить все ячейки ноутбука.
