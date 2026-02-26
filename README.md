@@ -115,8 +115,8 @@
 
 ```
 taxi_order_forecasting/
-├── data/                               # Папка для данных
-│   └── taxi.csv                         # Исходные данные (нужно добавить вручную)
+├── data/                                # Папка для данных
+│   └── taxi.csv                         # Исходные данные
 ├── notebooks/                           # Jupyter ноутбук с полным анализом
 │   └── taxi_order_forecasting.ipynb
 ├── README.md                            # Этот файл
